@@ -9,6 +9,10 @@
  * @file    MKL27Z644_Project.c
  * @brief   Application entry point.
  */
+
+// IMP project 2023
+// Jan Kalenda xkalen07
+// keeping the NPX copyright as required by the clause
 #include <stdio.h>
 #include "board.h"
 #include "peripherals.h"
@@ -60,7 +64,6 @@
 	GPIO_PortToggle(BOARD_##PIN##_PR_GPIO, BOARD_##PIN##_PR_GPIO_PIN_MASK); \
 } while (0)
 
-#define POKUS(PIN) do {if (PIN == 2) {GPIO_PortToggle(BOARD_S2_G2_GPIO, BOARD_S2_G2_GPIO_PIN_MASK);} } while (0)
 
 volatile int S1 = 2;
 volatile int S2 = 4;
@@ -71,20 +74,8 @@ volatile bool side2 = false;
 volatile bool side3 = false;
 
 
-void delay(void)
-{
-    volatile uint32_t i = 0;
-    for (i = 0; i < 400000; ++i)
-    {
-        __asm("NOP"); /* delay */
-    }
-}
-
-
 void initPins()
 {
-	LED_GREEN_INIT(1);
-	LED_GREEN_OFF();
 	gpio_pin_config_t led_config_off = {
 		kGPIO_DigitalOutput,
 		0,
@@ -136,7 +127,6 @@ int main(void) {
     BOARD_InitBootClocks();
     BOARD_InitBootPeripherals();
 
-/////////////////////////////////////////////////////////////////////////////
     PIT_GetDefaultConfig(&pitConfig);
 
 	/* Init pit module */
@@ -152,12 +142,11 @@ int main(void) {
 	EnableIRQ(PIT_IRQn);
 
 	/* Start channel 0 */
-	//PRINTF("\r\nStarting channel No.0 ...");
 	PIT_StartTimer(PIT, kPIT_Chnl_0);
 /////////////////////////////////////
 
 
-    PORT_SetPinInterruptConfig(BOARD_S3_PS_PORT, BOARD_S3_PS_PIN, kPORT_InterruptRisingEdge); //kPORT_InterruptFallingEdge);
+    PORT_SetPinInterruptConfig(BOARD_S3_PS_PORT, BOARD_S3_PS_PIN, kPORT_InterruptRisingEdge);
     PORT_SetPinInterruptConfig(BOARD_S2_PS_PORT, BOARD_S2_PS_PIN, kPORT_InterruptRisingEdge);
     PORT_SetPinInterruptConfig(BOARD_S1_PS_PORT, BOARD_S1_PS_PIN, kPORT_InterruptRisingEdge);
 
@@ -165,11 +154,10 @@ int main(void) {
 
     initPins();
 
-    /* Enter an infinite loop, just incrementing a counter. */
 
 
     while(1) {
-        __asm("NOP");
+    	 __WFI();
     }
     return 0 ;
 }
@@ -244,28 +232,26 @@ void PIT_IRQHandler(void)
 		SIDELIGHTS(1);
 		option = 1;
 	}
-	/* Added for, and affects, all PIT handlers. For CPU clock which is much larger than the IP bus clock,
-	 * CPU can run out of the interrupt handler before the interrupt flag being cleared, resulting in the
-	 * CPU's entering the handler again and again. Adding DSB can prevent the issue from happening.
-	 */
 	__DSB();
 }
 
 void PORTB_PORTC_PORTD_PORTE_IRQHandler(void)
 {
+	volatile int i = 0;
+	while(i < 30000) {
+		__asm("NOP");
+		i++;
+	}
 	if (PORTE->ISFR & BOARD_S3_PS_PIN_MASK) {
-//			ACTIVATE_LIGHT(S3);
 			side3 = true;
 	    }
 	if (PORTE->ISFR & BOARD_S2_PS_PIN_MASK) {
-//			ACTIVATE_LIGHT(S2);
 			side2 = true;
 		}
 	if (PORTE->ISFR & BOARD_S1_PS_PIN_MASK) {
-			//ACTIVATE_LIGHT(S1);
 			side1 = true;
 		}
-	//int a = 5;
+	//taken from SDK example for GPIO interrupts
 #if (defined(FSL_FEATURE_PORT_HAS_NO_INTERRUPT) && FSL_FEATURE_PORT_HAS_NO_INTERRUPT)
     /* Clear external interrupt flag. */
     GPIO_GpioClearInterruptFlags(BOARD_S3_PS_GPIO, BOARD_S3_PS_PIN_MASK);
